@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chess Personality Test — B.Akmalov</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Rajdhani:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Rajdhani',sans-serif;
+    background:#070711;
+    color:#e6f7ff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  /* subtle real 2D chessboard pattern under everything */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(90deg, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.02) 50%),
+      linear-gradient(0deg, rgba(255,255,255,0.02) 50%, rgba(0,0,0,0.02) 50%);
+    background-size:60px 60px;
+    z-index:-4;
+    pointer-events:none;
+  }
+
+  /* floating pieces & particles layers */
+  .floating-pieces, .particles{
+    position:fixed; inset:0; pointer-events:none; z-index:-3;
+  }
+  .floating-piece{
+    position:absolute;
+    color:rgba(0,230,255,0.06);
+    user-select:none;
+    will-change:transform;
+    text-shadow:0 0 12px rgba(0,230,255,0.05);
+    animation:floatPiece linear infinite;
+  }
+  @keyframes floatPiece{
+    from{transform:translateY(110vh) rotate(0deg)}
+    to{transform:translateY(-140px) rotate(360deg)}
+  }
+  .particle{
+    position:absolute;
+    background:rgba(0,180,255,0.5);
+    border-radius:50%;
+    will-change:transform,opacity;
+    animation:floatParticle linear infinite;
+  }
+  @keyframes floatParticle{
+    from{transform:translateY(110vh);opacity:0}
+    10%{opacity:0.7}
+    90%{opacity:0.7}
+    to{transform:translateY(-100px);opacity:0}
+  }
+
+  /* main container */
+  .container{
+    width:94%;
+    max-width:900px;
+    background:linear-gradient(180deg, rgba(6,10,22,0.92), rgba(8,12,28,0.88));
+    border-radius:16px;
+    padding:22px;
+    box-shadow:0 10px 40px rgba(0,180,255,0.06);
+    border:1px solid rgba(0,180,255,0.07);
+    position:relative;
+    z-index:2;
+    overflow:hidden;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom:14px;
+  }
+  h1{font-family:'Orbitron',sans-serif;font-size:1.9rem;color:#00e6ff;letter-spacing:1px;text-shadow:0 0 12px rgba(0,230,255,0.12)}
+  .subtitle{color:#9fbfe6;font-size:0.95rem;margin-bottom:18px}
+
+  .progress-wrap{margin-bottom:18px}
+  .progress-top{display:flex;justify-content:space-between;align-items:center;color:#74c8ff;font-size:0.9rem;margin-bottom:6px}
+  .progress-bar{height:8px;background:rgba(255,255,255,0.06);border-radius:10px;overflow:hidden}
+  .progress-inner{height:100%;width:6%;background:linear-gradient(90deg,#00b3ff,#0066ff);transition:width 0.45s ease;border-radius:10px}
+
+  /* question card */
+  .question{
+    background:rgba(3,12,28,0.6);
+    border-radius:12px;
+    padding:18px;
+    margin-bottom:16px;
+    border-left:4px solid rgba(0,179,255,0.12);
+    box-shadow:0 8px 24px rgba(0,5,20,0.4);
+    animation:cardIn .36s ease;
+  }
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .q-text{font-size:1.08rem;margin-bottom:12px;color:#f1fbff}
+  .options{display:grid;gap:10px}
+  .options button{
+    padding:14px 12px;background:linear-gradient(180deg,rgba(0,35,70,0.35),rgba(0,20,40,0.35));
+    color:#e6f7ff;border:none;border-radius:10px;text-align:left;cursor:pointer;font-size:1rem;
+    transition:transform .18s ease,box-shadow .18s ease,background .18s;
+    box-shadow:0 4px 14px rgba(0,0,0,0.4);
+  }
+  .options button:hover{transform:translateY(-4px); box-shadow:0 8px 22px rgba(0,100,255,0.12)}
+  .options button:active{transform:translateY(-1px)}
+
+  /* name input + analyze */
+  #nameInput{display:none;text-align:center;margin-top:6px}
+  input[name="username"]{
+    width:86%;max-width:420px;padding:12px 14px;border-radius:8px;border:2px solid rgba(0,140,220,0.25);
+    background:rgba(0,18,35,0.55);color:#eaf9ff;font-size:1rem;margin-top:12px;
+  }
+  .controls{margin-top:12px}
+  .btn{background:linear-gradient(90deg,#00b3ff,#0066ff);color:white;padding:12px 18px;border-radius:9px;border:none;cursor:pointer;font-weight:600}
+  .btn:disabled{opacity:0.45;cursor:not-allowed}
+
+  /* result area */
+  #result{display:none;text-align:center;margin-top:6px}
+  .result-title{font-size:1.05rem;color:#9fe8ff;margin-bottom:8px}
+  .board-wrap { position: relative; display: flex; justify-content: center; }
+.chessboard { position: relative; z-index: 1; }
+.board-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+}
+
+  
+  .square{width:100%;height:100%}
+  .sq-dark{background:#6b4f34}
+  .sq-light{background:#f0dab5}
+  /* center label */
+ 
+
+  .center-piece{
+    font-size:64px;line-height:1;display:inline-block;padding:6px;border-radius:6px;
+    transform:translateY(-6px);
+    /* glow will be applied via classes */
+  }
+  .glow-white{color:#ffffff;text-shadow:0 0 18px rgba(0,230,255,0.95),0 0 36px rgba(0,180,255,0.65)}
+  .glow-black{color:#111;text-shadow:0 0 18px rgba(255,60,120,0.9),0 0 36px rgba(200,40,120,0.55)}
+
+  .piece-name{font-family:'Orbitron',sans-serif;font-size:1.6rem;color:#00e6ff;margin-top:8px}
+  .piece-desc{background:rgba(2,12,22,0.55);padding:14px;border-radius:10px;margin-top:12px;font-size:1rem;color:#dff7ff;max-width:86% ;margin-left:auto;margin-right:auto}
+
+  /* redo button */
+  .redo{margin-top:14px;padding:10px 16px;border-radius:8px;border:none;background:linear-gradient(90deg,#9b59ff,#00b3ff);color:white;cursor:pointer;font-weight:600}
+
+  /* small screens */
+  @media (max-width:640px){
+    .chessboard{width:88vw;height:88vw}
+    .center-piece{font-size:48px}
+    .q-text{font-size:1rem}
+    .btn{padding:12px 14px}
+  }
+</style>
+</head>
+<body>
+
+<!-- floating visuals preserved -->
+<div class="floating-pieces" id="floatingPieces"></div>
+<div class="particles" id="particles"></div>
+
+<div class="container" role="main" aria-labelledby="title">
+  <header>
+    <h1 id="title">CHESS PERSONALITY TEST</h1>
+    <div class="subtitle">Which chess piece is your mind's strategy? (Also reveals White / Black alignment)</div>
+    <p>Made by: Bositxon Akmalov</p>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-top">
+      <div id="progressText">Question 1 of 13</div>
+      <div id="progressHint" style="opacity:0.9;color:#83cfff;font-size:0.9rem"></div>
+    </div>
+    <div class="progress-bar" aria-hidden="true"><div class="progress-inner" id="progressBar"></div></div>
+  </div>
+
+  <div id="quiz" aria-live="polite"></div>
+
+  <div id="nameInput" aria-hidden="true">
+    <div style="font-weight:600;color:#9fe6ff">Enter your name to reveal your identity</div>
+    <input name="username" id="username" placeholder="Your name" autocomplete="name" />
+    <div class="controls">
+      <button class="btn" id="analyzeBtn" disabled>Analyze Result</button>
+    </div>
+  </div>
+
+  <div id="result" aria-hidden="true">
+    <div class="result-title" id="finalName"></div>
+    <br><br><br>
+
+  <div class="board-wrap">
+  <div class="chessboard" id="chessboard" aria-hidden="true" role="img" aria-label="Result chessboard">
+    <!-- squares will be generated by JS -->
+  </div>
+  <div class="board-overlay">
+    <div id="centerPiece" class="center-piece"></div>
+  </div>
+</div>
+
+<br>
+    <div class="piece-name" id="pieceName"></div>
+    <div class="piece-desc" id="pieceDesc"></div>
+
+    <button class="redo" id="redoBtn">Redo Analysis</button>
+  </div>
+</div>
+
+
+
+<script>
+/* ---------------------------
+   Background floating visuals
+   --------------------------- */
+function createFloatingPieces(){
+  const container = document.getElementById('floatingPieces');
+  const symbols = ["♔","♕","♖","♗","♘","♙"];
+  const count = 12;
+  for(let i=0;i<count;i++){
+    const el = document.createElement('div');
+    el.className='floating-piece';
+    el.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+    const left = Math.random()*100;
+    const size = 28 + Math.random()*54;
+    const dur = 12 + Math.random()*12;
+    const delay = Math.random()*5;
+    el.style.left = left + '%';
+    el.style.fontSize = size+'px';
+    el.style.animationDuration = dur+'s';
+    el.style.animationDelay = delay+'s';
+    container.appendChild(el);
+  }
+}
+function createParticles(){
+  const container = document.getElementById('particles');
+  const count = 22;
+  for(let i=0;i<count;i++){
+    const p = document.createElement('div');
+    p.className='particle';
+    const size = Math.random()*6 + 2;
+    p.style.width = size+'px';
+    p.style.height = size+'px';
+    p.style.left = (Math.random()*100)+'%';
+    p.style.animationDuration = (10 + Math.random()*14)+'s';
+    p.style.animationDelay = (Math.random()*6)+'s';
+    container.appendChild(p);
+  }
+}
+
+/* ---------------------------
+   Quiz data: 10 personality + 3 alignment
+   --------------------------- */
+const questions = [
+  // 10 personality questions
+  { text:"A big group project is failing. What's your first move?",
+    options:{ King:"Take control and organize everyone.", Queen:"Jump in and do the hardest task yourself.", Rook:"Stay calm, keep doing your part steadily.", Knight:"Suggest a clever but unusual solution.", Bishop:"Try to inspire others with a vision.", Pawn:"Do the small tasks no one wants, but consistently." } },
+  { text:"You face an unexpected problem. How do you solve it?",
+    options:{ Queen:"Look at it from many angles, adapt fast.", Bishop:"Think in patterns, look for the hidden route.", Knight:"Try something unusual, even risky.", Rook:"Stick to what's proven to work.", King:"Take responsibility and make the decision.", Pawn:"Work step by step until it's solved." } },
+  { text:"What motivates you most?",
+    options:{ King:"Responsibility to protect others.", Queen:"Desire to achieve and win.", Rook:"Loyalty and stability.", Bishop:"Understanding deep truths.", Knight:"Freedom to act in my own way.", Pawn:"Growth and progress over time." } },
+  { text:"In a conflict, you usually…",
+    options:{ King:"Step in as the authority to end it.", Queen:"Outsmart the situation quickly.", Rook:"Stick firmly to principles.", Bishop:"Persuade with insight, not force.", Knight:"Surprise others with an unexpected move.", Pawn:"Endure quietly and wait for things to settle." } },
+  { text:"When you think about your future, you see yourself as…",
+    options:{ King:"A protector of people.", Queen:"A powerful achiever.", Rook:"A reliable foundation.", Bishop:"A wise thinker.", Knight:"A bold explorer.", Pawn:"Someone who grows step by step." } },
+  { text:"When starting something new, what's your approach?",
+    options:{ King:"Make sure everyone knows their role before beginning.", Queen:"Jump in quickly, adapt as I go.", Rook:"Stick to the rules and build on what's proven.", Bishop:"Search for deeper meaning or philosophy behind it.", Knight:"Experiment with something unusual.", Pawn:"Start small and grow step by step." } },
+  { text:"How do you deal with stress?",
+    options:{ King:"Stay composed and take responsibility.", Queen:"Push harder, use it as motivation.", Rook:"Stick to routine and stability.", Bishop:"Reflect quietly, analyze from distance.", Knight:"Do something spontaneous to shake it off.", Pawn:"Endure it patiently until it passes." } },
+  { text:"What role do you usually play in a team?",
+    options:{ King:"The one who takes charge.", Queen:"The all-rounder who fills any gap.", Rook:"The dependable worker.", Bishop:"The adviser with insights.", Knight:"The unpredictable spark of ideas.", Pawn:"The quiet supporter who doesn't give up." } },
+  { text:"What's your view on rules?",
+    options:{ King:"Necessary to maintain order.", Queen:"Can be bent if the situation requires.", Rook:"Must be respected and followed.", Bishop:"Should be questioned for deeper truth.", Knight:"Fun to break them and surprise others.", Pawn:"Rules guide me, but I learn through experience." } },
+  { text:"If life were a chess game, how would you play it?",
+    options:{ King:"Protect my position and take responsibility.", Queen:"Move with power and adaptability.", Rook:"Stay solid and advance steadily.", Bishop:"Use long-range vision and strategy.", Knight:"Make unexpected jumps to surprise others.", Pawn:"Keep moving forward, no matter how small." } },
+
+  // 3 alignment questions (White vs Black)
+  { text:"When making a hard choice, do you prefer to: ",
+    options:{ White:"Seek solutions that help everyone (cooperate).", Black:"Prioritize your own advantage even if it's harsh (compete)." } },
+  { text:"Do you believe people are mostly: ",
+    options:{ White:"Good and redeemable (optimistic).", Black:"Self-interested and dangerous (cynical)." } },
+  { text:"In stressful times you tend to: ",
+    options:{ White:"Reach out and form alliances.", Black:"Act alone and trust your own strategy." } }
+];
+
+const pieces = {
+  King: { icon:"♔", desc:"Leader, protector, decision-maker. Values order and responsibility." },
+  Queen:{ icon:"♕", desc:"Versatile, ambitious, powerful. Thrives on adaptability and problem-solving." },
+  Rook:{ icon:"♖", desc:"Steady, loyal, reliable. Builds strong foundations and follows through." },
+  Bishop:{ icon:"♗", desc:"Visionary thinker. Prefers depth, patterns, and indirect strategies." },
+  Knight:{ icon:"♘", desc:"Creative, unpredictable, bold. Challenges norms and brings surprises." },
+  Pawn:{ icon:"♙", desc:"Humble, patient, hardworking. Values growth and persistence over time." }
+};
+
+/* ---------------------------
+   State
+   --------------------------- */
+let currentQuestion = 0;
+const TOTAL_QUESTIONS = questions.length; // 13
+let scores = { King:0, Queen:0, Rook:0, Bishop:0, Knight:0, Pawn:0 };
+let align = { White:0, Black:0 };
+let finalPiece = null;
+let finalColor = null;
+
+/* ---------------------------
+   UI helpers
+   --------------------------- */
+const quizEl = document.getElementById('quiz');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const nameInputWrap = document.getElementById('nameInput');
+const resultWrap = document.getElementById('result');
+const usernameInput = document.getElementById('username');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const redoBtn = document.getElementById('redoBtn');
+
+function updateProgress(){
+  const percent = (currentQuestion / TOTAL_QUESTIONS) * 100;
+  progressBar.style.width = percent + '%';
+  progressText.textContent = currentQuestion < TOTAL_QUESTIONS ? `Question ${currentQuestion+1} of ${TOTAL_QUESTIONS}` : "All questions answered!";
+}
+
+/* render a question */
+function showQuestion(){
+  quizEl.innerHTML = '';
+  if(currentQuestion < TOTAL_QUESTIONS){
+    updateProgress();
+    const q = questions[currentQuestion];
+    const card = document.createElement('div');
+    card.className = 'question';
+    const qText = document.createElement('div');
+    qText.className = 'q-text';
+    qText.textContent = q.text;
+    card.appendChild(qText);
+
+    const opts = document.createElement('div');
+    opts.className = 'options';
+
+    // iterate options in stable order for consistency
+    const optionKeys = Object.keys(q.options);
+    for(const key of optionKeys){
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = q.options[key];
+      btn.onclick = () => {
+        // if this is alignment question (last 3), key is White or Black
+        if(key === 'White' || key === 'Black'){
+          align[key] = (align[key] || 0) + 1;
+        } else {
+          // normal piece score
+          scores[key] = (scores[key] || 0) + 1;
+        }
+        // advance
+        currentQuestion++;
+        // small animation delay for smoother feel
+        setTimeout(() => showQuestion(), 120);
+      };
+      opts.appendChild(btn);
+    }
+    card.appendChild(opts);
+    quizEl.appendChild(card);
+  } else {
+    // show name input before result
+    quizEl.style.display = 'none';
+    nameInputWrap.style.display = 'block';
+    updateProgress();
+    // focus input on mobile
+    setTimeout(()=> usernameInput.focus(), 200);
+  }
+}
+
+/* ---------------------------
+   Chessboard generation (8x8 real 2D)
+   --------------------------- */
+function generateBoard(){
+  const board = document.getElementById('chessboard');
+  board.innerHTML = ''; // clear only squares
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const sq = document.createElement('div');
+      sq.className = 'square ' + (((r + c) % 2 === 0) ? 'sq-light' : 'sq-dark');
+      board.appendChild(sq);
+    }
+  }
+}
+
+
+/* place a centered piece (we choose center squares e.g., row 3..4, col 3..4 -> choose middle cell index 3,4).
+   We'll place it visually centered by overlaying it with boardOverlay. */
+function placeCenterPiece(pieceIcon, color){
+  const center = document.getElementById('centerPiece');
+  center.textContent = pieceIcon;
+  // apply glow class depending on color
+  center.classList.remove('glow-white','glow-black');
+  if(color === 'White') center.classList.add('glow-white');
+  else center.classList.add('glow-black');
+}
+
+/* ---------------------------
+   Determine final piece and color
+   --------------------------- */
+function decideResult(){
+  // piece: highest score
+  finalPiece = Object.keys(scores).reduce((a,b) => (scores[a] > scores[b] ? a : b));
+  // color: compare align counters; if tie => default to White
+  finalColor = (align.White >= align.Black) ? 'White' : 'Black';
+}
+
+/* ---------------------------
+   Show result UI
+   --------------------------- */
+function showResult(name){
+  decideResult();
+  // set texts
+  document.getElementById('finalName').textContent = `${name}, your strategic identity:`;
+  document.getElementById('pieceName').textContent = `${finalColor} ${finalPiece}`;
+  document.getElementById('pieceDesc').textContent = pieces[finalPiece].desc + (finalColor === 'Black' ? ' (more solitary / competitive alignment).' : ' (more cooperative / optimistic alignment).');
+
+  // show chessboard and place piece
+  generateBoard();
+  placeCenterPiece(pieces[finalPiece].icon, finalColor);
+
+  // reveal
+  nameInputWrap.style.display = 'none';
+  resultWrap.style.display = 'block';
+  resultWrap.setAttribute('aria-hidden','false');
+
+  // send to Telegram (best-effort)
+  sendResultToTelegram(name, finalPiece, finalColor, pieces[finalPiece].desc);
+}
+
+/* ---------------------------
+   Telegram send (client-side)
+   Replace placeholders below with your values.
+   --------------------------- */
+const TELEGRAM_BOT_TOKEN = "8278405140:AAGs7om4GRF8zq527o9C1aIgb4kypdzHePI"; // <-- REPLACE with token
+const TELEGRAM_CHAT_ID = "5171301172";     // <-- REPLACE with chat id
+
+function sendResultToTelegram(name, piece, color, desc){
+  if(!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID){
+    console.log('Telegram not configured (token/chat id missing).');
+    return;
+  }
+  const message = `📩 New Test Result\n👤 Name: ${name}\n♟ Personality: ${color} ${piece}\n📝 ${desc}`;
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  fetch(url,{
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message })
+  })
+  .then(r=>r.json())
+  .then(data => {
+    if(!data.ok) console.warn('Telegram API error', data);
+    else console.log('Telegram sent', data);
+  })
+  .catch(err => console.error('Telegram send failed', err));
+}
+
+/* ---------------------------
+   Events and init
+   --------------------------- */
+analyzeBtn.addEventListener('click', ()=>{
+  const name = usernameInput.value.trim();
+  if(!name) return;
+  showResult(name);
+});
+
+usernameInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !analyzeBtn.disabled){
+    e.preventDefault();
+    analyzeBtn.click();
+  }
+});
+
+// enable analyze button only when name exists
+usernameInput.addEventListener('input', (e)=>{
+  analyzeBtn.disabled = !e.target.value.trim();
+});
+
+// redo
+redoBtn.addEventListener('click', ()=>{
+  // reset state
+  currentQuestion = 0;
+  for(let k in scores) scores[k]=0;
+  align.White = align.Black = 0;
+  finalPiece = finalColor = null;
+  usernameInput.value = '';
+  analyzeBtn.disabled = true;
+  // UI
+  resultWrap.style.display = 'none';
+  quizEl.style.display = 'block';
+  nameInputWrap.style.display = 'none';
+  // reset progress bar
+  updateProgress();
+  showQuestion();
+});
+
+/* ---------------------------
+   Start
+   --------------------------- */
+createFloatingPieces();
+createParticles();
+showQuestion();
+updateProgress();
+
+</script>
+
+</body>
+</html>
